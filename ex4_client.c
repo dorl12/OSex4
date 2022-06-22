@@ -1,12 +1,10 @@
 //Dor Levy 313547085
 #include <signal.h>
 #include <stdio.h>
-//#include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include<string.h>
-//#include <stdlib.h>
 #include <time.h>
 
 void resultFromServerHandler(int sig)
@@ -15,7 +13,7 @@ void resultFromServerHandler(int sig)
     int clientPID = getpid();
     char fileName[30];
     strcpy(fileName, "to_client_");
-    char clientPIDString[50];
+    char clientPIDString[20];
     sprintf(clientPIDString, "%d", clientPID);
     strcat(fileName, clientPIDString);
     strcat(fileName, ".txt");
@@ -25,15 +23,18 @@ void resultFromServerHandler(int sig)
         printf("ERROR_FROM_EX4\n");
         exit(-1);
     }
-    char result[20];
-    int readToSrv = read(resultFile, result, 20);
+    char result[22];
+    int readToSrv = read(resultFile, result, 22);
     if(readToSrv < 0)
     {
         printf("ERROR_FROM_EX4\n");
+        close(resultFile);
         exit(-1);
     }
     close(resultFile);
+    result[readToSrv] = '\0';
     printf("%s\n", result);
+    remove(fileName);
 }
 
 void noResponseHandler(int sig)
@@ -42,11 +43,11 @@ void noResponseHandler(int sig)
     exit(-1);
 }
 
-int main(int argc, char *argv[])
+int openToSrvFile()
 {
+    int toSrvFile;
     time_t t;
     srand((unsigned) time(&t));
-    int toSrvFile;
     int i = 0;
     while(i < 10)
     {
@@ -66,20 +67,24 @@ int main(int argc, char *argv[])
         printf("ERROR_FROM_EX4\n");
         exit(-1);
     }
+    return toSrvFile;
+}
+
+void writeToSrvFile(int toSrvFile, char *argv[])
+{
     int clientPID = getpid();
-    int writeToSrvFile = write(toSrvFile, &clientPID, sizeof(clientPID));
+    char clientPIDString[20];
+    sprintf(clientPIDString, "%d", clientPID);
+    strcat(clientPIDString, "\n");
+    int writeToSrvFile = write(toSrvFile, clientPIDString, strlen(clientPIDString));
     if(writeToSrvFile < 0)
     {
         printf("ERROR_FROM_EX4\n");
+        close(toSrvFile);
         exit(-1);
     }
-    writeToSrvFile = write(toSrvFile, "\n", strlen("\n"));
-    if(writeToSrvFile < 0)
-    {
-        printf("ERROR_FROM_EX4\n");
-        exit(-1);
-    }
-    for(int j = 2; j < 5; j++)
+    int j;
+    for(j = 2; j < 5; j++)
     {
         char buff[strlen(argv[j]) + 2];
         strcpy(buff, argv[j]);
@@ -88,15 +93,25 @@ int main(int argc, char *argv[])
         if(writeToSrvFile < 0)
         {
             printf("ERROR_FROM_EX4\n");
+            close(toSrvFile);
             exit(-1);
         }
     }
-    if(kill(atoi(argv[1]), SIGUSR1) < 0) {
+    close(toSrvFile);
+}
+
+int main(int argc, char *argv[])
+{
+    if(argc != 5)
+    {
         printf("ERROR_FROM_EX4\n");
         exit(-1);
     }
-    alarm(30);
-    pause();
+    int toSrvFile = openToSrvFile();
+    writeToSrvFile(toSrvFile, argv);
+    kill(atoi(argv[1]), SIGUSR1);
     signal(SIGUSR2, resultFromServerHandler);
     signal(SIGALRM, noResponseHandler);
+    alarm(30);
+    pause();
 }
