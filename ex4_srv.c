@@ -16,7 +16,7 @@ struct request {
 };
 
 struct request getRequestFromClient() {
-    int toSrvFile = open("to_srv.txt", O_RDONLY, 0666);
+    int toSrvFile = open("to_srv", O_RDONLY, 0666);
     if(toSrvFile < 0)
     {
         printf("ERROR_FROM_EX4\n");
@@ -30,7 +30,7 @@ struct request getRequestFromClient() {
         exit(-1);
     }
     close(toSrvFile);
-    remove("to_srv.txt");
+    remove("to_srv");
     struct request clientRequest;
     char *token = strtok(buff, "\n");
     strcpy(clientRequest.clientPID, token);
@@ -71,7 +71,6 @@ void writeToResultFile(struct request clientRequest, bool isDivideByZero, int re
     char fileName[30];
     strcpy(fileName, "to_client_");
     strcat(fileName, clientRequest.clientPID);
-    strcat(fileName, ".txt");
     int resultFile = open(fileName, O_WRONLY | O_CREAT, 0666);
     if(resultFile < 0)
     {
@@ -83,7 +82,6 @@ void writeToResultFile(struct request clientRequest, bool isDivideByZero, int re
     if(isDivideByZero)
     {
         strcpy(resultString, "CANNOT_DIVIDE_BY_ZERO");
-        //char* divideByZeroResult = "CANNOT_DIVIDE_BY_ZERO";
         writeResultFile = write(resultFile, resultString, strlen(resultString));
     } else
     {
@@ -100,6 +98,7 @@ void writeToResultFile(struct request clientRequest, bool isDivideByZero, int re
 
 void serveClient(int sig)
 {
+    alarm(60);
     pid_t pid = fork();
     if(pid == (-1))
     {
@@ -113,7 +112,6 @@ void serveClient(int sig)
         int result = calculateResult(clientRequest, &isDivideByZero);
         writeToResultFile(clientRequest, isDivideByZero, result);
         kill(atoi(clientRequest.clientPID), SIGUSR2);
-        alarm(60);
         exit(-1);
     }
 }
@@ -125,7 +123,7 @@ void endOfService(int sig)
     exit(-1);
 }
 
-int main(int argc, char *argv[])
+int main()
 {
     signal(SIGUSR1, serveClient);
     signal(SIGALRM, endOfService);

@@ -16,7 +16,6 @@ void resultFromServerHandler(int sig)
     char clientPIDString[20];
     sprintf(clientPIDString, "%d", clientPID);
     strcat(fileName, clientPIDString);
-    strcat(fileName, ".txt");
     int resultFile = open(fileName, O_RDONLY, 0666);
     if(resultFile < 0)
     {
@@ -51,7 +50,7 @@ int openToSrvFile()
     int i = 0;
     while(i < 10)
     {
-        toSrvFile = open("to_srv.txt", O_WRONLY | O_CREAT | O_EXCL, 0666);
+        toSrvFile = open("to_srv", O_WRONLY | O_CREAT | O_EXCL, 0666);
         if(toSrvFile == (-1))
         {
             i++;
